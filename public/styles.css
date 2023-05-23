@@ -1,0 +1,23 @@
+.myForm {
+    width: 70%;
+    margin: 50px auto;
+    border: 1px solid rgb(109, 108, 108);
+    padding: 10px;
+}
+
+.button-holder {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    margin-bottom: 5px;
+}
+
+.suggest-btn {
+    font-size: 0.7rem;
+    padding: 0.25rem;
+}
+
+button[type="submit"] {
+    display: block;
+    margin: 10px auto 0px auto;
+}

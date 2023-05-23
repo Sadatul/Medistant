@@ -20,13 +20,34 @@ const multer = require("multer");
 const { resolve } = require("path");
 var storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, __dirname + "/uploads")
+        cb(null, __dirname + "/public/uploads/audios")
     },
     filename: function (req, file, cb) {
         cb(null, Date.now() + '.m4a') //Appending .jpg
     }
 })
 const upload = multer({ storage: storage });
+
+/* MongoDB setUp */
+const { default: mongoose } = require("mongoose");
+const moongose = require("mongoose");
+moongose.connect("mongodb://0.0.0.0:27017/Medistant");
+
+var audioFileName, imageFileName;
+const prescriptionSchema = new moongose.Schema({
+    date: String,
+    duration: Number,
+    doctorName: String,
+    hospitalName: String,
+    organs: [String],
+    medicines: [String],
+    audioUrl: String,
+    imageUrl: String
+});
+
+const prescriptionModel = moongose.model("prescription", prescriptionSchema);
+// var p = new prescriptionModel(new dataConstructor("28-08-2000", "Swastika", "Pandit", ["Liver", "Kidney"], ["Paracetamol", "Maxpro"], "111.m4a", "111.jpg"));
+// p.save();
 
 app.use(express.static('public'));
 app.listen(3000, function () {
@@ -58,6 +79,14 @@ app.get("/text/data", function (req, res) {
     convertedText = "";
     convertionFlag = 0;
 });
+
+app.get("/form", function (req, res) {
+    res.sendFile(__dirname + "/pages/form.html");
+});
+
+app.get("/data.json", (req, res) => {
+    res.sendFile(__dirname + "/data.json");
+});
 /* ALL GET request -----> END */
 
 
@@ -67,16 +96,106 @@ async function uploadFiles(req, res) {
     // console.log(req.body);
     // console.log(req.files);
     // res.send("FILE UPLOADED");
+    audioFileName = req.files[0].filename;
     convertedText = await speechToText(req.files[0].filename);
     convertionFlag = 1;
     console.log("Inside Converted data: " + convertedText);
     // res.redirect("/text");
     // res.send("done");
 }
+app.post("/text", textToJson);
+
+async function textToJson(req, res) {
+    var text = req.body.text;
+    console.log(generatePrompt(text, "medicine"));
+    try {
+        var completion = await openai.createCompletion({
+            model: "text-davinci-003",
+            prompt: generatePrompt(text, "medicine"),
+            temperature: 0.6,
+        });
+        var sampleMedicine = completion.data.choices[0].text;
+        console.log(sampleMedicine);
+        var completion2 = await openai.createCompletion({
+            model: "text-davinci-003",
+            prompt: generatePrompt(text, "organ"),
+            temperature: 0.6,
+        });
+        var sampleOrgan = completion2.data.choices[0].text;
+        console.log(sampleOrgan);
+        // res.status(200).json({ result: completion.data.choices[0].text });
+        var dataForForm = {
+            organs: splitter(sampleOrgan),
+            medicines: splitter(sampleMedicine)
+        };
+
+        fs.writeFile("data.json", JSON.stringify(dataForForm), (error) => {
+            if (error) {
+                console.log(error);
+                return;
+            }
+            console.log("JSON file was written correctly");
+
+        });
+        res.redirect("/form");
+    } catch (error) {
+        // Consider adjusting the error handling logic for your use case
+        if (error.response) {
+            console.error(error.response.status, error.response.data);
+            res.status(error.response.status).json(error.response.data);
+        } else {
+            console.error(`Error with OpenAI API request: ${error.message}`);
+            res.status(500).json({
+                error: {
+                    message: 'An error occurred during your request.',
+                }
+            });
+        }
+    }
+}
+
+app.post("/form", function (req, res) {
+    var medicines = req.body.medicineNames.split(";");
+    var organs = req.body.organNames.split(";");
+    medicines.pop();
+    organs.pop();
+    var duration = Number(req.body.duration);
+    var date = req.body.date;
+    var doctorName = req.body.doctorName;
+    var hospitalName = req.body.hospitalName;
+    var p = new prescriptionModel(new dataConstructor(date, duration, doctorName, hospitalName, organs, medicines, audioFileName, "111.jpg"));
+    p.save();
+    console.log("Data Saved");
+    res.send("Thank you for your kind co-operation");
+});
 /* ALL POST request -----> END */
 
-
 /*Helper Functions*/
+function dataConstructor(date, duration, dName, hName, organs, medicines, audioFile, imageFile) {
+    this.date = date,
+        this.duration = duration,
+        this.doctorName = dName,
+        this.hospitalName = hName,
+        this.organs = organs,
+        this.medicines = medicines,
+        this.audioUrl = audioFile,
+        this.imageUrl = imageFile
+}
+
+function generatePrompt(text, key) {
+    var query = `"${text} Which are names of ${key}s in the text? Return results separated by comma and without whitespace characters."`;
+    return query;
+}
+
+function splitter(text) {
+    var x = text.split(",");
+    for (var i = 0; i < x.length; i++) {
+        x[i] = x[i].trim();
+    }
+    return x;
+}
+// var a = new dataConstructor("2000", "Atik", "M-Hospital", ["head", "neck"], ["Paracetamol", "MaxPro"]);
+// console.log(a.date);
 async function upload_file(api_token, path) {
     console.log(`Uploading file: ${path}`);
 
@@ -164,7 +283,7 @@ async function speechToText(filename) {
     // You may also remove the upload step and update the 'audio_url' parameter in the
     // 'transcribeAudio' function to point to a remote audio or video file.
     // -----------------------------------------------------------------------------
-    const path = __dirname + "/uploads/" + filename;
+    const path = __dirname + "/public/uploads/audios/" + filename;
     const uploadUrl = await upload_file(process.env.SPEECH_API_KEY, path);
 
     // If the upload fails, log an error and return
