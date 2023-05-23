@@ -99,6 +99,7 @@ if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
             pauseRecordingElement.disabled = true;
 
             startRecordingElement.disabled = true;
+            window.location.href = "http://localhost:3000/text";
         }
 
         pauseRecordingElement.onclick = () => {
@@ -138,7 +139,6 @@ if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
 
             var a = sendAudioFile(blob);
             console.log('audio file sent');
-
             startRecordingElement.disabled = true;
         }
 

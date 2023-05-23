@@ -42,17 +42,27 @@ packages and APIs ----> END */
 app.get("/audio", (req, res) => {
     res.sendFile(__dirname + "/pages/record-audio.html");
 });
+app.get("/text", sendText);
+function sendText(req, res) {
+    if (convertionFlag == 0) {
+        setTimeout(() => {
+            sendText(req, res);
+        }, 1000);
+    }
+    else {
+        res.sendFile(__dirname + "/pages/converted-text.html");
+    }
+}
+app.get("/text/data", function (req, res) {
+    res.send(convertedText);
+    convertedText = "";
+    convertionFlag = 0;
+});
 /* ALL GET request -----> END */
 
 
 /* ALL POST request -----> START */
 app.post("/audioUpload", upload.array("audio-file"), uploadFiles);
-/* ALL POST request -----> END */
-
-
-/*Helper Functions*/
-
-
 async function uploadFiles(req, res) {
     // console.log(req.body);
     // console.log(req.files);
@@ -63,7 +73,10 @@ async function uploadFiles(req, res) {
     // res.redirect("/text");
     // res.send("done");
 }
+/* ALL POST request -----> END */
 
+
+/*Helper Functions*/
 async function upload_file(api_token, path) {
     console.log(`Uploading file: ${path}`);
 
