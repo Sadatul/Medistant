@@ -21,12 +21,14 @@ async function prepareForm() {
 
     var buttonHolder = document.querySelector(".button-holder-medicine");
     for (var i in namesOfMedicines) {
-        buttonHolder.innerHTML = buttonHolder.innerHTML + "\n" + createButtonHtml("medicine-" + namesOfMedicines[i], namesOfMedicines[i])
+        var id = removeSpace(namesOfMedicines[i]);
+        buttonHolder.innerHTML = buttonHolder.innerHTML + "\n" + createButtonHtml("medicine-" + id, namesOfMedicines[i])
     }
 
     var buttonHolder = document.querySelector(".button-holder-organ");
     for (var i in namseOfOrgans) {
-        buttonHolder.innerHTML = buttonHolder.innerHTML + "\n" + createButtonHtml("organs-" + namseOfOrgans[i], namseOfOrgans[i])
+        var id = removeSpace(namseOfOrgans[i]);
+        buttonHolder.innerHTML = buttonHolder.innerHTML + "\n" + createButtonHtml("organs-" + id, namseOfOrgans[i])
     }
     $(".suggest-btn").click(function (e) {
         var list = e.target.id.split("-");
@@ -60,4 +62,12 @@ function clickBtn(type, id) {
     $("#" + s).val($("#" + s).val() + v + ";");
 }
 
+function removeSpace(s) {
+    var result = "";
+    for (var i = 0; i < s.length; i++) {
+        if (s[i] == " ") continue;
+        result = result + s[i];
+    }
+    return result;
+}
 

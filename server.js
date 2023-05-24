@@ -16,17 +16,47 @@ const configuration = new Configuration({
 });
 const openai = new OpenAIApi(configuration);
 
-const multer = require("multer");
-const { resolve } = require("path");
+// const multer = require("multer");
+// const { resolve } = require("path");
+// var storage = multer.diskStorage({
+//     destination: function (req, file, cb) {
+//         cb(null, __dirname + "/public/uploads/audios")
+//     },
+//     filename: function (req, file, cb) {
+//         cb(null, Date.now() + '.m4a') //Appending .jpg
+//     }
+// })
+// const upload = multer({ storage: storage });
+
+var multer = require('multer');
+var path = require('path')
+
 var storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, __dirname + "/public/uploads/audios")
+        var a;
+        if (file.mimetype == "audio/mp3") {
+            a = "audios";
+        }
+        else {
+            a = "images";
+        }
+        cb(null, __dirname + "/public/uploads/" + a);
     },
     filename: function (req, file, cb) {
-        cb(null, Date.now() + '.m4a') //Appending .jpg
+        // console.log(file.mimetype);
+        var a;
+        if (file.mimetype == "audio/mp3") {
+            a = ".m4a";
+        }
+        else {
+            a = ".jpg";
+        }
+        cb(null, Date.now() + a); //Appending extension
     }
 })
-const upload = multer({ storage: storage });
+
+var upload = multer({ storage: storage });
+
 
 /* MongoDB setUp */
 const { default: mongoose } = require("mongoose");
@@ -62,6 +92,10 @@ packages and APIs ----> END */
 /* ALL GET request -----> START */
 app.get("/audio", (req, res) => {
     res.sendFile(__dirname + "/pages/record-audio.html");
+});
+
+app.get("/image", (req, res) => {
+    res.sendFile(__dirname + "/pages/upload-image.html");
 });
 app.get("/text", sendText);
 function sendText(req, res) {
@@ -137,7 +171,7 @@ async function textToJson(req, res) {
             console.log("JSON file was written correctly");
 
         });
-        res.redirect("/form");
+        res.redirect("/image");
     } catch (error) {
         // Consider adjusting the error handling logic for your use case
         if (error.response) {
@@ -163,11 +197,18 @@ app.post("/form", function (req, res) {
     var date = req.body.date;
     var doctorName = req.body.doctorName;
     var hospitalName = req.body.hospitalName;
-    var p = new prescriptionModel(new dataConstructor(date, duration, doctorName, hospitalName, organs, medicines, audioFileName, "111.jpg"));
+    var p = new prescriptionModel(new dataConstructor(date, duration, doctorName, hospitalName, organs, medicines, audioFileName, imageFileName));
     p.save();
     console.log("Data Saved");
     res.send("Thank you for your kind co-operation");
 });
+
+app.post("/imageUpload", upload.array("files"), uploadFilesImg);
+
+function uploadFilesImg(req, res) {
+    imageFileName = req.files[0].filename
+    res.json({ message: "Successfully uploaded files" });
+}
 /* ALL POST request -----> END */
 
 /*Helper Functions*/
